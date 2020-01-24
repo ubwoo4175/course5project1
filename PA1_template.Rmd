@@ -1,0 +1,73 @@
+---
+title: "PA1_template"
+author: "Rick Yoo"
+date: '2020 1 24 '
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### 1. Loading and preprocessing the data
+```{r}
+DF <- read.csv('activity.csv')
+
+library(tidyverse)
+DF <- DF %>%
+	select(date, interval, steps)
+```
+
+### 2. What is the mean total number of steps taken per day?  
+```{r}
+totalperday <- tapply(DF$steps, DF$date, sum, na.rm = TRUE)
+barplot(totalperday, xlab='Date', ylab='Total # of steps')
+```  
+
+Mean = `r mean(totalperday)`  
+Median = `r median(totalperday)`
+
+### 3. What is the average daily activity pattern?
+```{r}
+dailyactivity <-  tapply(DF$steps, DF$interval, mean, na.rm=TRUE)
+plot(names(dailyactivity), dailyactivity, type='l', xlab='interval', ylab='average steps')
+```
+
+Interval with maximum average = `` `r names(which(dailyactivity==max(dailyactivity)))` ``
+
+### 4. Imputing missing values
+```{r}
+sum(is.na(DF))
+newDF <- DF
+for (i in 1:nrow(DF)) {
+	if(is.na(newDF[i,]$steps)) {
+		newDF[i,]$steps <- dailyactivity[[as.character(DF[i,]$interval)]]
+	}
+}
+newtotalperday <- tapply(newDF$steps, newDF$date, sum, na.rm = TRUE)
+barplot(newtotalperday, xlab='Date', ylab='Total # of steps')
+```
+
+new Mean = `r mean(newtotalperday)` ( > `r mean(totalperday)`)
+
+new Median = `r median(newtotalperday)`( > `r median(totalperday)`)
+
+
+### 5. Are there differences in activity patterns between weekdays and weekends?
+```{r}
+D <- newDF %>%
+	mutate(dayend = ifelse(weekdays(as.Date(as.character(date), '%Y-%m-%d')) %in% c('토요일', '일요일'), 'weekend', 'weekday')) %>%
+	mutate(dayend = as.factor(dayend)) %>%
+	group_by(interval, dayend) %>%
+	summarise(
+		avg = mean(steps)
+	)
+
+ggplot(data = D) +
+	geom_line(aes(interval, avg, col=dayend)) +
+	facet_grid( dayend ~ . ) +
+	ggtitle('Average steps across all weekday / weekend days')
+```
+
+
+
